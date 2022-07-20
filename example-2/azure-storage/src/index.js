@@ -1,5 +1,5 @@
 const express = require("express");
-const azure = require('azure-storage');
+const { BlobServiceClient, StorageSharedKeyCredential } = require("@azure/storage-blob");
 
 const app = express();
 
@@ -33,16 +33,18 @@ console.log(`Serving videos from Azure storage account ${STORAGE_ACCOUNT_NAME}.`
 // Create the Blob service API to communicate with Azure storage.
 //
 function createBlobService() {
-    const blobService = azure.createBlobService(STORAGE_ACCOUNT_NAME, STORAGE_ACCESS_KEY);
-    // Uncomment next line for extra debug logging.
-    //blobService.logger.level = azure.Logger.LogLevels.DEBUG; 
+    const sharedKeyCredential = new StorageSharedKeyCredential(STORAGE_ACCOUNT_NAME, STORAGE_ACCESS_KEY);
+    const blobService = new BlobServiceClient(
+        `https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net`,
+        sharedKeyCredential
+    );
     return blobService;
 }
 
 //
 // Registers a HTTP GET route to retrieve videos from storage.
 //
-app.get("/video", (req, res) => {
+app.get("/video", async (req, res) => {
 
     const videoPath = req.query.path;
     console.log(`Streaming video from path ${videoPath}.`);
@@ -50,34 +52,21 @@ app.get("/video", (req, res) => {
     const blobService = createBlobService();
 
     const containerName = "videos";
-    blobService.getBlobProperties(containerName, videoPath, (err, properties) => { // Sends a HTTP HEAD request to retreive video size.
-        if (err) {
-            console.error(`Error occurred getting properties for video ${containerName}/${videoPath}.`);
-            console.error(err && err.stack || err);
-            res.sendStatus(500);
-            return;
-        }
+    const containerClient = blobService.getContainerClient(containerName);
+    const blobClient = containerClient.getBlobClient(videoPath);
 
-        //
-        // Writes HTTP headers to the response.
-        //
-        res.writeHead(200, {
-            "Content-Length": properties.contentLength,
-            "Content-Type": "video/mp4",
-        });
+    const properties = await blobClient.getProperties();
 
-        //
-        // Streams the video from Azure storage to the response.
-        //
-        blobService.getBlobToStream(containerName, videoPath, res, err => {
-            if (err) {
-                console.error(`Error occurred getting video ${containerName}/${videoPath} to stream.`);
-                console.error(err && err.stack || err);
-                res.sendStatus(500);
-                return;
-            }
-        });
+    //
+    // Writes HTTP headers to the response.
+    //
+    res.writeHead(200, {
+        "Content-Length": properties.contentLength,
+        "Content-Type": "video/mp4",
     });
+
+    const response = await blobClient.download();
+    response.readableStreamBody.pipe(res);
 });
 
 //
