@@ -1,8 +1,6 @@
 const express = require("express");
 const { BlobServiceClient, StorageSharedKeyCredential } = require("@azure/storage-blob");
 
-const app = express();
-
 //
 // Throws an error if the any required environment variables are missing.
 //
@@ -40,6 +38,8 @@ function createBlobService() {
     );
     return blobService;
 }
+
+const app = express();
 
 //
 // Registers a HTTP GET route to retrieve videos from storage.

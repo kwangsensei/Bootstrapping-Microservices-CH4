@@ -13,32 +13,26 @@ if (!process.env.PORT) {
 //
 const PORT = process.env.PORT;
 
-//
-// Application entry point.
-//
-async function main() {
+const app = express();
 
-    const app = express();
-
-    app.get("/video", async (req, res) => { // Route for streaming video.
-        
-        const videoPath = "./videos/SampleVideo_1280x720_1mb.mp4";
-        const stats = await fs.promises.stat(videoPath);
+//
+// Registers a HTTP GET route for video streaming.
+//
+app.get("/video", async (req, res) => { // Route for streaming video.
     
-        res.writeHead(200, {
-            "Content-Length": stats.size,
-            "Content-Type": "video/mp4",
-        });
-        fs.createReadStream(videoPath).pipe(res);
-    });
+    const videoPath = "./videos/SampleVideo_1280x720_1mb.mp4";
+    const stats = await fs.promises.stat(videoPath);
 
-    app.listen(PORT, () => {
-        console.log("Microservice online.");
+    res.writeHead(200, {
+        "Content-Length": stats.size,
+        "Content-Type": "video/mp4",
     });
-}
+    fs.createReadStream(videoPath).pipe(res);
+});
 
-main()
-    .catch(err => {
-        console.error("Microservice failed to start.");
-        console.error(err && err.stack || err);
-    });
+//
+// Starts the HTTP server.
+//
+app.listen(PORT, () => {
+    console.log(`Microservice online`);
+});

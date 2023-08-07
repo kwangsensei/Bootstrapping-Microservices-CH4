@@ -2,8 +2,6 @@ const express = require("express");
 const http = require("http");
 const mongodb = require("mongodb");
 
-const app = express();
-
 //
 // Throws an error if the any required environment variables are missing.
 //
@@ -44,6 +42,8 @@ async function main() {
     const client = await mongodb.MongoClient.connect(DBHOST); // Connects to the database.
     const db = client.db(DBNAME);
     const videosCollection = db.collection("videos");
+    
+    const app = express();
         
     app.get("/video", async (req, res) => {
         const videoId = new mongodb.ObjectId(req.query.id);
